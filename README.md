@@ -58,7 +58,7 @@ python-multipart==0.0.6
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/makawuhu/Stock-Sentiment-Tracker.git)
    cd stock-sentiment-tracker
    ```
 
