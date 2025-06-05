@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ symbol }} - Stock Sentiment Tracker</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .stock-info {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .price-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .price {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+        .change {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .positive { color: #28a745; }
+        .negative { color: #dc3545; }
+        .neutral { color: #6c757d; }
+        .sentiment-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .sentiment-summary {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .sentiment-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .sentiment-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .sentiment-positive { background: #28a745; }
+        .sentiment-negative { background: #dc3545; }
+        .sentiment-neutral { background: #6c757d; }
+        .news-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .news-headline {
+            padding: 12px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .refresh-btn:hover {
+            background: #5a6fd8;
+        }
+        h1, h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ data.price_data.company_name }}</h1>
+        <p>Symbol: {{ symbol }}</p>
+    </div>
+
+    <div class="stock-info">
+        <h2>Stock Price</h2>
+        <div class="price-display">
+            <div class="price">${{ data.price_data.current_price }}</div>
+            <div class="change {% if data.price_data.change > 0 %}positive{% elif data.price_data.change < 0 %}negative{% else %}neutral{% endif %}">
+                {% if data.price_data.change > 0 %}+{% endif %}${{ data.price_data.change }} 
+                ({% if data.price_data.change_percent > 0 %}+{% endif %}{{ data.price_data.change_percent }}%)
+            </div>
+        </div>
+        <p><strong>Previous Close:</strong> ${{ data.price_data.previous_close }}</p>
+    </div>
+
+    <div class="sentiment-section">
+        <h2>News Sentiment Analysis</h2>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <span class="sentiment-badge sentiment-{{ data.sentiment_analysis.overall_sentiment }}">
+                {{ data.sentiment_analysis.overall_sentiment }}
+            </span>
+            <p><strong>Sentiment Score:</strong> {{ data.sentiment_analysis.sentiment_score }}</p>
+        </div>
+
+        <div class="sentiment-summary">
+            <div class="sentiment-item">
+                <h3 class="positive">{{ data.sentiment_analysis.positive_count }}</h3>
+                <p>Positive</p>
+            </div>
+            <div class="sentiment-item">
+                <h3 class="neutral">{{ data.sentiment_analysis.neutral_count }}</h3>
+                <p>Neutral</p>
+            </div>
+            <div class="sentiment-item">
+                <h3 class="negative">{{ data.sentiment_analysis.negative_count }}</h3>
+                <p>Negative</p>
+            </div>
+        </div>
+        
+        <p><strong>Total Articles Analyzed:</strong> {{ data.total_articles }}</p>
+    </div>
+
+    <div class="news-section">
+        <h2>Recent News Headlines</h2>
+        {% for headline in data.news_headlines %}
+        <div class="news-headline">
+            {{ headline }}
+        </div>
+        {% endfor %}
+        
+        <button class="refresh-btn" onclick="window.location.reload()">Refresh Data</button>
+    </div>
+</body>
+</html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Sentiment Tracker - Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .search-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .search-form {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        .search-input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        .examples {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .example-link {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            text-decoration: none;
+            color: #495057;
+            transition: all 0.3s;
+        }
+        .example-link:hover {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+        }
+        .multi-stock-form {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .multi-stock-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .results-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+            display: none;
+        }
+        .results-header {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .close-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .results-iframe {
+            width: 100%;
+            height: 800px;
+            border: none;
+            background: white;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Stock Sentiment Tracker</h1>
+        <p>Analyze stock sentiment using real-time news data and price information</p>
+    </div>
+
+    <div class="search-section">
+        <h2>Search Single Stock</h2>
+        <div class="search-form">
+            <input type="text" id="stockSymbol" class="search-input" placeholder="Enter stock symbol (e.g., AAPL, TSLA, GOOGL)" maxlength="10">
+            <button onclick="searchStock()" class="btn btn-primary">Analyze Stock</button>
+            <button onclick="viewStockHTML()" class="btn btn-secondary">View HTML Report</button>
+        </div>
+
+        <div class="multi-stock-form">
+            <h3>Compare Multiple Stocks</h3>
+            <div class="alert alert-info">
+                Enter multiple stock symbols separated by commas (e.g., AAPL,GOOGL,TSLA)
+            </div>
+            <input type="text" id="multiStockSymbols" class="multi-stock-input" placeholder="Enter stock symbols separated by commas (max 10)">
+            <button onclick="compareStocks()" class="btn btn-primary">Compare Stocks</button>
+            <button onclick="viewChart()" class="btn btn-secondary">View Chart</button>
+        </div>
+    </div>
+
+    <div class="results-section" id="resultsSection">
+        <div class="results-header">
+            <h3 id="resultsTitle">Loading...</h3>
+            <button class="close-btn" onclick="closeResults()" title="Close">&times;</button>
+        </div>
+        <div class="loading-spinner" id="loadingSpinner">
+            <p>📊 Analyzing stock data...</p>
+        </div>
+        <iframe class="results-iframe" id="resultsFrame" src="about:blank"></iframe>
+    </div>
+
+    <div class="features">
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Real-time Price Data</h3>
+            <p>Get current stock prices, changes, and percentage movements using multiple data sources with automatic fallback.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📰</div>
+            <h3>News Sentiment Analysis</h3>
+            <p>Analyze sentiment from recent news headlines using advanced natural language processing techniques.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Smart Caching</h3>
+            <p>Intelligent caching system reduces API calls and prevents rate limiting while ensuring fresh data.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3>Multi-Stock Comparison</h3>
+            <p>Compare sentiment and price data across multiple stocks simultaneously with detailed analysis.</p>
+        </div>
+    </div>
+
+    <div class="examples">
+        <h3>Try These Popular Stocks</h3>
+        <a href="/stock/AAPL/html" class="example-link">AAPL</a>
+        <a href="/stock/GOOGL/html" class="example-link">GOOGL</a>
+        <a href="/stock/TSLA/html" class="example-link">TSLA</a>
+        <a href="/stock/MSFT/html" class="example-link">MSFT</a>
+        <a href="/stock/AMZN/html" class="example-link">AMZN</a>
+        <a href="/stock/NVDA/html" class="example-link">NVDA</a>
+        <a href="/stock/META/html" class="example-link">META</a>
+        <a href="/stock/NFLX/html" class="example-link">NFLX</a>
+        
+        <h4 style="margin-top: 20px;">Compare Examples</h4>
+        <a href="/compare/html?symbols=AAPL&symbols=GOOGL&symbols=MSFT" class="example-link">Tech Giants</a>
+        <a href="/compare/html?symbols=TSLA&symbols=F&symbols=GM" class="example-link">Auto Stocks</a>
+        <a href="/compare/html?symbols=JPM&symbols=BAC&symbols=WFC" class="example-link">Bank Stocks</a>
+        
+        <h4 style="margin-top: 20px;">Chart Examples</h4>
+        <a href="/chart/html?symbols=AAPL&symbols=GOOGL&symbols=MSFT&symbols=AMZN&symbols=TSLA" class="example-link">Tech Chart</a>
+        <a href="/chart/html?symbols=TSLA&symbols=F&symbols=GM&symbols=RIVN" class="example-link">Auto Chart</a>
+    </div>
+
+    <script>
+        function showResults(url, title) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsFrame = document.getElementById('resultsFrame');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            resultsTitle.textContent = title;
+            resultsSection.style.display = 'block';
+            loadingSpinner.style.display = 'block';
+            resultsFrame.style.display = 'none';
+            
+            resultsFrame.src = url;
+            resultsFrame.onload = function() {
+                loadingSpinner.style.display = 'none';
+                resultsFrame.style.display = 'block';
+            };
+            
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsFrame = document.getElementById('resultsFrame');
+            resultsSection.style.display = 'none';
+            resultsFrame.src = 'about:blank';
+        }
+
+        function searchStock() {
+            const symbol = document.getElementById('stockSymbol').value.trim().toUpperCase();
+            if (symbol) {
+                window.open(`/stock/${symbol}`, '_blank');
+            } else {
+                alert('Please enter a stock symbol');
+            }
+        }
+
+        function viewStockHTML() {
+            const symbol = document.getElementById('stockSymbol').value.trim().toUpperCase();
+            if (symbol) {
+                showResults(`/stock/${symbol}/html`, `Stock Analysis: ${symbol}`);
+            } else {
+                alert('Please enter a stock symbol');
+            }
+        }
+
+        function compareStocks() {
+            const symbols = document.getElementById('multiStockSymbols').value
+                .split(',')
+                .map(s => s.trim().toUpperCase())
+                .filter(s => s.length > 0);
+            
+            if (symbols.length < 2) {
+                alert('Please enter at least 2 stock symbols');
+                return;
+            }
+            
+            if (symbols.length > 10) {
+                alert('Maximum 10 stocks allowed for comparison');
+                return;
+            }
+            
+            const queryParams = symbols.map(s => `symbols=${s}`).join('&');
+            showResults(`/compare/html?${queryParams}`, `Stock Comparison: ${symbols.join(', ')}`);
+        }
+
+        function viewChart() {
+            const symbols = document.getElementById('multiStockSymbols').value
+                .split(',')
+                .map(s => s.trim().toUpperCase())
+                .filter(s => s.length > 0);
+            
+            if (symbols.length < 2) {
+                alert('Please enter at least 2 stock symbols');
+                return;
+            }
+            
+            if (symbols.length > 20) {
+                alert('Maximum 20 stocks allowed for chart');
+                return;
+            }
+            
+            const queryParams = symbols.map(s => `symbols=${s}`).join('&');
+            showResults(`/chart/html?${queryParams}`, `Stock Chart: ${symbols.join(', ')}`);
+        }
+
+        // Allow Enter key to trigger search
+        document.getElementById('stockSymbol').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchStock();
+            }
+        });
+
+        document.getElementById('multiStockSymbols').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                compareStocks();
+            }
+        });
+    </script>
+</body>
+</html>

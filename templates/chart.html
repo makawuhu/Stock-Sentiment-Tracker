@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price vs Sentiment Correlation Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            position: relative;
+            height: 500px;
+        }
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        .data-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .sentiment-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8em;
+        }
+        .sentiment-positive { background: #28a745; }
+        .sentiment-negative { background: #dc3545; }
+        .sentiment-neutral { background: #6c757d; }
+        .price-change {
+            font-weight: bold;
+        }
+        .positive { color: #28a745; }
+        .negative { color: #dc3545; }
+        .neutral { color: #6c757d; }
+        .error-section {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Price vs Sentiment Correlation</h1>
+        <p>Analyzing: {{ symbols | join(', ') }}</p>
+    </div>
+
+    {% if errors %}
+    <div class="error-section">
+        <h3>Errors Encountered:</h3>
+        {% for error in errors %}
+        <p><strong>{{ error.symbol }}:</strong> {{ error.error }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>Stocks Analyzed</h3>
+            <div class="stat-value">{{ chart_data | length }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Avg Sentiment</h3>
+            <div class="stat-value">{{ "%.3f" | format((chart_data | sum(attribute='sentiment_score')) / (chart_data | length)) }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Avg Price Change</h3>
+            <div class="stat-value {% if (chart_data | sum(attribute='change_percent')) / (chart_data | length) > 0 %}positive{% elif (chart_data | sum(attribute='change_percent')) / (chart_data | length) < 0 %}negative{% else %}neutral{% endif %}">
+                {{ "%.2f" | format((chart_data | sum(attribute='change_percent')) / (chart_data | length)) }}%
+            </div>
+        </div>
+        <div class="stat-card">
+            <h3>Correlation</h3>
+            <div class="stat-value" id="correlation-value">Calculating...</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="toggleChartType()">Toggle Chart Type</button>
+        <button class="btn" onclick="window.location.reload()">Refresh Data</button>
+        <a href="/dashboard" class="btn">Back to Dashboard</a>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="sentimentChart"></canvas>
+    </div>
+
+    <div class="data-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Company</th>
+                    <th>Price</th>
+                    <th>Change %</th>
+                    <th>Sentiment Score</th>
+                    <th>Sentiment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in chart_data %}
+                <tr>
+                    <td><strong>{{ stock.symbol }}</strong></td>
+                    <td>{{ stock.company_name }}</td>
+                    <td>${{ stock.price }}</td>
+                    <td class="price-change {% if stock.change_percent > 0 %}positive{% elif stock.change_percent < 0 %}negative{% else %}neutral{% endif %}">
+                        {% if stock.change_percent > 0 %}+{% endif %}{{ stock.change_percent }}%
+                    </td>
+                    <td>{{ stock.sentiment_score }}</td>
+                    <td>
+                        <span class="sentiment-badge sentiment-{{ stock.sentiment_label }}">
+                            {{ stock.sentiment_label }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const chartData = {{ chart_data | tojson }};
+        let currentChartType = 'scatter';
+        let chart;
+
+        function calculateCorrelation(x, y) {
+            const n = x.length;
+            if (n === 0) return 0;
+            
+            const sumX = x.reduce((a, b) => a + b, 0);
+            const sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+            const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+            const sumYY = y.reduce((sum, yi) => sum + yi * yi, 0);
+            
+            const numerator = n * sumXY - sumX * sumY;
+            const denominator = Math.sqrt((n * sumXX - sumX * sumX) * (n * sumYY - sumY * sumY));
+            
+            return denominator === 0 ? 0 : numerator / denominator;
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            const sentimentScores = chartData.map(stock => stock.sentiment_score);
+            const priceChanges = chartData.map(stock => stock.change_percent);
+            
+            const correlation = calculateCorrelation(sentimentScores, priceChanges);
+            document.getElementById('correlation-value').textContent = correlation.toFixed(3);
+
+            const datasets = [];
+
+            if (currentChartType === 'scatter') {
+                datasets.push({
+                    label: 'Stocks',
+                    data: chartData.map(stock => ({
+                        x: stock.sentiment_score,
+                        y: stock.change_percent,
+                        symbol: stock.symbol,
+                        company: stock.company_name
+                    })),
+                    backgroundColor: chartData.map(stock => {
+                        if (stock.sentiment_label === 'positive') return 'rgba(40, 167, 69, 0.7)';
+                        if (stock.sentiment_label === 'negative') return 'rgba(220, 53, 69, 0.7)';
+                        return 'rgba(108, 117, 125, 0.7)';
+                    }),
+                    borderColor: chartData.map(stock => {
+                        if (stock.sentiment_label === 'positive') return 'rgba(40, 167, 69, 1)';
+                        if (stock.sentiment_label === 'negative') return 'rgba(220, 53, 69, 1)';
+                        return 'rgba(108, 117, 125, 1)';
+                    }),
+                    borderWidth: 2,
+                    pointRadius: 8,
+                    pointHoverRadius: 12
+                });
+            } else {
+                // Bar chart
+                datasets.push({
+                    label: 'Sentiment Score',
+                    data: sentimentScores,
+                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y'
+                });
+                datasets.push({
+                    label: 'Price Change %',
+                    data: priceChanges,
+                    backgroundColor: 'rgba(255, 206, 84, 0.7)',
+                    borderColor: 'rgba(255, 206, 84, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y1'
+                });
+            }
+
+            const config = {
+                type: currentChartType === 'scatter' ? 'scatter' : 'bar',
+                data: {
+                    labels: currentChartType === 'bar' ? chartData.map(stock => stock.symbol) : undefined,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: currentChartType === 'scatter' 
+                                ? `Sentiment Score vs Price Change (Correlation: ${correlation.toFixed(3)})`
+                                : 'Sentiment Scores and Price Changes by Stock'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (currentChartType === 'scatter') {
+                                        const point = context.raw;
+                                        return `${point.symbol}: Sentiment ${point.x.toFixed(3)}, Change ${point.y.toFixed(2)}%`;
+                                    } else {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(3)}`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: currentChartType === 'scatter' ? {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sentiment Score'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Price Change %'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    } : {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Sentiment Score'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Price Change %'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            };
+
+            chart = new Chart(ctx, config);
+        }
+
+        function toggleChartType() {
+            currentChartType = currentChartType === 'scatter' ? 'bar' : 'scatter';
+            createChart();
+        }
+
+        // Initialize chart
+        createChart();
+    </script>
+</body>
+</html>
